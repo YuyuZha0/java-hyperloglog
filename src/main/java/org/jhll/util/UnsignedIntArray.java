@@ -2,6 +2,7 @@ package org.jhll.util;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Objects;
 
 public final class UnsignedIntArray implements Serializable, Cloneable {
 
@@ -102,7 +103,36 @@ public final class UnsignedIntArray implements Serializable, Cloneable {
   @Override
   public UnsignedIntArray clone() {
     UnsignedIntArray copy = new UnsignedIntArray(length, width);
-    System.arraycopy(raw, 0, copy.raw, 0, raw.length);
+    copy.setRawBytes(raw, 0);
     return copy;
+  }
+
+  public void getRawBytes(byte[] dest, int offset) {
+    Objects.requireNonNull(dest);
+    Utils.checkArgument(offset >= 0, "illegal offset: %d", offset);
+    Utils.checkArgument(dest.length >= offset + raw.length, "capacity not enough!");
+    System.arraycopy(raw, 0, dest, offset, raw.length);
+  }
+
+  public void setRawBytes(byte[] src, int offset) {
+    Objects.requireNonNull(src);
+    Utils.checkArgument(offset >= 0, "illegal offset: %d", offset);
+    Utils.checkArgument(src.length >= offset + raw.length, "capacity not enough!");
+    System.arraycopy(src, offset, raw, 0, raw.length);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    UnsignedIntArray array = (UnsignedIntArray) o;
+    return length == array.length && width == array.width && Arrays.equals(raw, array.raw);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = Objects.hash(length, width);
+    result = 31 * result + Arrays.hashCode(raw);
+    return result;
   }
 }

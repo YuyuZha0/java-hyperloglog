@@ -1,6 +1,7 @@
 package org.jhll;
 
 import org.jhll.hash.Funnel;
+import org.jhll.hash.MurmurHash3;
 import org.jhll.util.UnsignedIntArray;
 import org.jhll.util.Utils;
 
@@ -83,23 +84,45 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T> {
     return (1L << x);
   }
 
-  private static long ceil(double d) {
-    return (long) Math.ceil(d);
+  private static long round(double d) {
+    return Math.round(d);
   }
 
-  private byte rho(long w) {
-    return (byte) ((Long.numberOfLeadingZeros(w) + 1) & Utils.mask(registerWidth));
+  private static byte makePrefix(int log2m, int w) {
+    assert log2m >= 4 && log2m <= 31;
+    assert w >= 1 && w <= 8;
+    int n = log2m << 3;
+    n |= w;
+    return (byte) (n & 0xff);
+  }
+
+  public static <U> ClassicHyperLogLog<U> fromByteArray(byte[] bytes, Funnel<? super U> funnel) {
+    Objects.requireNonNull(bytes, "null bytes");
+    Objects.requireNonNull(funnel, "null funnel");
+    Utils.checkArgument(bytes.length > 2, "bytes length is at least 2: %d", bytes.length);
+    byte checksum = (byte) MurmurHash3.hash32x86(bytes, 0, bytes.length - 1, 0);
+    Utils.checkArgument(
+        checksum == bytes[bytes.length - 1],
+        "checksum not match, expected: %x, actual: %x",
+        checksum,
+        bytes[bytes.length - 1]);
+    byte prefix = bytes[0];
+    int log2m = (prefix >>> 3) & 0xff;
+    int registerWidth = prefix & 0b111;
+    ClassicHyperLogLog<U> hyperLogLog = new ClassicHyperLogLog<>(funnel, log2m, registerWidth);
+    hyperLogLog.registers.setRawBytes(bytes, 1);
+    return hyperLogLog;
+  }
+
+  private int rho(long w) {
+    return (Long.numberOfLeadingZeros(w) + 1) & Utils.mask(registerWidth);
   }
 
   @Override
   public void put(T value) {
     long x = funnel.hash64(value);
-    // .debugBinary("x", x);
     int idx = (int) (x >>> (Long.SIZE - log2m)); // First p bits of x
-    // Utils.debugBinary("idx", (long) idx);
     long w = x << log2m;
-    // Utils.debugBinary("w", w);
-    // System.out.println(rho(w));
 
     int v = registers.get(idx);
     int v1 = rho(w);
@@ -123,21 +146,47 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T> {
     double e = alpha(m) * m * m / x;
     if (e <= m * 2.5) {
       if (v == 0) {
-        return ceil(e);
+        return round(e);
       } else {
-        return ceil(linearCounting(m, v));
+        return round(linearCounting(m, v));
       }
     }
     double p32 = fastPowerOf2(32);
     if (e <= p32 / 30D) {
-      return ceil(e);
+      return round(e);
     }
 
-    return ceil(-p32 * Math.log(1 - e / p32));
+    return round(-p32 * Math.log(1 - e / p32));
   }
 
   @Override
   public double relativeError() {
     return 1.04 / Math.sqrt(registers.length());
+  }
+
+  @Override
+  public byte[] toByteArray() {
+    byte[] bytes = new byte[registers.length() + 2];
+    bytes[0] = makePrefix(log2m, registerWidth);
+    registers.getRawBytes(bytes, 1);
+    byte checksum = (byte) MurmurHash3.hash32x86(bytes, 0, bytes.length - 1, 0);
+    bytes[bytes.length - 1] = checksum;
+    return bytes;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    ClassicHyperLogLog<?> that = (ClassicHyperLogLog<?>) o;
+    return log2m == that.log2m
+        && registerWidth == that.registerWidth
+        && funnel.equals(that.funnel)
+        && registers.equals(that.registers);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(funnel, log2m, registerWidth, registers);
   }
 }
