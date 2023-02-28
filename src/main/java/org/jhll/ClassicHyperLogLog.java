@@ -12,7 +12,7 @@ import java.util.Objects;
  *
  * @param <T>
  */
-public final class ClassicHyperLogLog<T> implements HyperLogLog<T> {
+public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperLogLog<T>> {
 
   private final Funnel<? super T> funnel;
   private final int log2m;
@@ -188,5 +188,18 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T> {
   @Override
   public int hashCode() {
     return Objects.hash(funnel, log2m, registerWidth, registers);
+  }
+
+  @Override
+  public ClassicHyperLogLog<T> union(ClassicHyperLogLog<T> other) {
+    Objects.requireNonNull(other);
+    Utils.checkArgument(log2m == other.log2m, "log2m not match!");
+    ClassicHyperLogLog<T> result =
+        new ClassicHyperLogLog<>(funnel, log2m, Math.max(registerWidth, other.registerWidth));
+    int length = registers.length();
+    for (int i = 0; i < length; ++i) {
+      result.registers.set(i, Math.max(registers.get(i), other.registers.get(i)));
+    }
+    return result;
   }
 }

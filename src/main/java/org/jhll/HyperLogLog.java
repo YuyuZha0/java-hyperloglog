@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Objects;
 
-public interface HyperLogLog<T> {
+public interface HyperLogLog<T, H extends HyperLogLog<T, H>> {
 
   void put(T value);
 
@@ -23,4 +23,6 @@ public interface HyperLogLog<T> {
       out.write(bytes);
     }
   }
+
+  H union(H other);
 }
