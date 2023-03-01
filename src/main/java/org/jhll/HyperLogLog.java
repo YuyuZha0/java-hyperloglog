@@ -25,4 +25,6 @@ public interface HyperLogLog<T, H extends HyperLogLog<T, H>> {
   }
 
   H union(H other);
+
+  void reset();
 }

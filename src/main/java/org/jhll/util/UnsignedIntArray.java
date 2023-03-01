@@ -1,10 +1,14 @@
 package org.jhll.util;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.RandomAccess;
 
-public final class UnsignedIntArray implements Serializable, Cloneable {
+public final class UnsignedIntArray implements Serializable, Cloneable, RandomAccess {
 
   private static final long serialVersionUID = 8779437312286023931L;
   private final int length;
@@ -12,23 +16,18 @@ public final class UnsignedIntArray implements Serializable, Cloneable {
   private final byte[] raw;
 
   public UnsignedIntArray(int length, int width) {
-    Utils.checkArgument(length > 0, "length should > 0: %d", length);
-    Utils.checkArgument(width > 0 && width <= 8, "width should within [0, 8]: %d", width);
+    Preconditions.checkArgument(length > 0, "length should > 0: %s", length);
+    Preconditions.checkArgument(width > 0 && width <= 8, "width should within [0, 8]: %s", width);
     this.length = length;
     this.width = width;
     this.raw = new byte[minBytesLen(length, width)];
   }
 
+  @VisibleForTesting
   static int minBytesLen(int length, int width) {
     int nBits = length * width;
     int w = nBits >>> 3;
     return (w << 3) == nBits ? w : w + 1;
-  }
-
-  private void checkIndex(int index) {
-    if (index < 0 || index >= length) {
-      throw new ArrayIndexOutOfBoundsException(index);
-    }
   }
 
   private void checkValue(int value) {
@@ -46,7 +45,7 @@ public final class UnsignedIntArray implements Serializable, Cloneable {
   }
 
   public int get(int index) {
-    checkIndex(index);
+    Preconditions.checkPositionIndex(index, length);
     int w = width;
     int fromBits = index * w;
     int arrayOffset = fromBits >>> 3;
@@ -63,7 +62,7 @@ public final class UnsignedIntArray implements Serializable, Cloneable {
   }
 
   public void set(int index, int val) {
-    checkIndex(index);
+    Preconditions.checkPositionIndex(index, length);
     checkValue(val);
     int w = width;
     int fromBits = index * w;
@@ -107,17 +106,18 @@ public final class UnsignedIntArray implements Serializable, Cloneable {
     return copy;
   }
 
-  public void getRawBytes(byte[] dest, int offset) {
-    Objects.requireNonNull(dest);
-    Utils.checkArgument(offset >= 0, "illegal offset: %d", offset);
-    Utils.checkArgument(dest.length >= offset + raw.length, "capacity not enough!");
-    System.arraycopy(raw, 0, dest, offset, raw.length);
+  public byte[] getRawBytes(boolean copy) {
+    if (copy) {
+      return Arrays.copyOf(raw, raw.length);
+    } else {
+      return raw;
+    }
   }
 
   public void setRawBytes(byte[] src, int offset) {
-    Objects.requireNonNull(src);
-    Utils.checkArgument(offset >= 0, "illegal offset: %d", offset);
-    Utils.checkArgument(src.length >= offset + raw.length, "capacity not enough!");
+    Preconditions.checkNotNull(src);
+    Preconditions.checkArgument(offset >= 0, "illegal offset: %s", offset);
+    Preconditions.checkArgument(src.length >= offset + raw.length, "capacity not enough!");
     System.arraycopy(src, offset, raw, 0, raw.length);
   }
 

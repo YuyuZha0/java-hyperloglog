@@ -1,7 +1,7 @@
 package org.jhll;
 
+import com.google.common.base.Preconditions;
 import org.jhll.hash.Funnel;
-import org.jhll.hash.MurmurHash3;
 import org.jhll.util.UnsignedIntArray;
 import org.jhll.util.Utils;
 
@@ -45,12 +45,12 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
    * </pre>
    */
   public ClassicHyperLogLog(Funnel<? super T> funnel, int log2m, int registerWidth) {
-    Objects.requireNonNull(funnel, "null funnel");
-    Utils.checkArgument(
-        log2m >= 4 && log2m <= 31, "illegal log2m(should be within [4, 31]): %d", log2m);
-    Utils.checkArgument(
+    Preconditions.checkNotNull(funnel, "null funnel");
+    Preconditions.checkArgument(
+        log2m >= 4 && log2m <= 31, "illegal log2m(should be within [4, 31]): %s", log2m);
+    Preconditions.checkArgument(
         registerWidth >= 1 && registerWidth <= 8,
-        "illegal registerWidth(should be within [1, 8]): %d",
+        "illegal registerWidth(should be within [1, 8]): %s",
         registerWidth);
     this.funnel = funnel;
     this.log2m = log2m;
@@ -97,13 +97,13 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
   }
 
   public static <U> ClassicHyperLogLog<U> fromByteArray(byte[] bytes, Funnel<? super U> funnel) {
-    Objects.requireNonNull(bytes, "null bytes");
-    Objects.requireNonNull(funnel, "null funnel");
-    Utils.checkArgument(bytes.length > 2, "bytes length is at least 2: %d", bytes.length);
-    byte checksum = (byte) MurmurHash3.hash32x86(bytes, 0, bytes.length - 1, 0);
-    Utils.checkArgument(
+    Preconditions.checkNotNull(bytes, "null bytes");
+    Preconditions.checkNotNull(funnel, "null funnel");
+    Preconditions.checkArgument(bytes.length > 2, "bytes length is at least 2: %s", bytes.length);
+    byte checksum = Utils.checksum(bytes, 0, bytes.length - 1);
+    Preconditions.checkArgument(
         checksum == bytes[bytes.length - 1],
-        "checksum not match, expected: %x, actual: %x",
+        "checksum not match, expected: %s, actual: %s",
         checksum,
         bytes[bytes.length - 1]);
     byte prefix = bytes[0];
@@ -166,10 +166,11 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
 
   @Override
   public byte[] toByteArray() {
-    byte[] bytes = new byte[registers.length() + 2];
+    byte[] raw = registers.getRawBytes(false);
+    byte[] bytes = new byte[raw.length + 2];
     bytes[0] = makePrefix(log2m, registerWidth);
-    registers.getRawBytes(bytes, 1);
-    byte checksum = (byte) MurmurHash3.hash32x86(bytes, 0, bytes.length - 1, 0);
+    System.arraycopy(raw, 0, bytes, 1, raw.length);
+    byte checksum = Utils.checksum(bytes, 0, bytes.length - 1);
     bytes[bytes.length - 1] = checksum;
     return bytes;
   }
@@ -192,8 +193,8 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
 
   @Override
   public ClassicHyperLogLog<T> union(ClassicHyperLogLog<T> other) {
-    Objects.requireNonNull(other);
-    Utils.checkArgument(log2m == other.log2m, "log2m not match!");
+    Preconditions.checkNotNull(other);
+    Preconditions.checkArgument(log2m == other.log2m, "log2m not match!");
     ClassicHyperLogLog<T> result =
         new ClassicHyperLogLog<>(funnel, log2m, Math.max(registerWidth, other.registerWidth));
     int length = registers.length();
@@ -201,5 +202,10 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
       result.registers.set(i, Math.max(registers.get(i), other.registers.get(i)));
     }
     return result;
+  }
+
+  @Override
+  public void reset() {
+    registers.clear();
   }
 }

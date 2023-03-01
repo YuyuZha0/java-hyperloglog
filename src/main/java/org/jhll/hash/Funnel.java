@@ -1,5 +1,6 @@
 package org.jhll.hash;
 
+import com.google.common.hash.Hashing;
 import org.jhll.util.Utils;
 
 public interface Funnel<T> {
@@ -7,7 +8,7 @@ public interface Funnel<T> {
   default int hash32(T value) {
     byte[] bytes = toByteArray(value);
     if (Utils.isNotEmpty(bytes)) {
-      return MurmurHash3.hash32x86(bytes);
+      return Hashing.murmur3_32_fixed().hashBytes(bytes).asInt();
     }
     return 0;
   }
@@ -15,7 +16,7 @@ public interface Funnel<T> {
   default long hash64(T value) {
     byte[] bytes = toByteArray(value);
     if (Utils.isNotEmpty(bytes)) {
-      return MurmurHash3.hash128x64(bytes)[0];
+      return Hashing.murmur3_128().hashBytes(bytes).asLong();
     }
     return 0L;
   }

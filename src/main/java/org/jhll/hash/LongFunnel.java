@@ -1,5 +1,7 @@
 package org.jhll.hash;
 
+import com.google.common.hash.Hashing;
+import com.google.common.primitives.Longs;
 import org.jhll.util.Utils;
 
 public final class LongFunnel implements Funnel<Long> {
@@ -9,16 +11,22 @@ public final class LongFunnel implements Funnel<Long> {
     if (aLong == null) {
       return Utils.emptyByteArray();
     }
-    return Utils.toByteArray(aLong);
+    return Longs.toByteArray(aLong);
   }
 
   @Override
   public long hash64(Long value) {
-    return value != null ? value : 0L;
+    if (value != null) {
+      return Hashing.murmur3_128().hashLong(value).asLong();
+    }
+    return 0L;
   }
 
   @Override
   public int hash32(Long value) {
-    return value != null ? MurmurHash3.hash32(value) : 0;
+    if (value != null) {
+      return Hashing.murmur3_32_fixed().hashLong(value).asInt();
+    }
+    return 0;
   }
 }
