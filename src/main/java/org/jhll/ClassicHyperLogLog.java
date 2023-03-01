@@ -1,7 +1,8 @@
 package org.jhll;
 
 import com.google.common.base.Preconditions;
-import org.jhll.hash.Funnel;
+import com.google.common.hash.Funnel;
+import com.google.common.hash.Hashing;
 import org.jhll.util.UnsignedIntArray;
 import org.jhll.util.Utils;
 
@@ -12,6 +13,7 @@ import java.util.Objects;
  *
  * @param <T>
  */
+@SuppressWarnings("UnstableApiUsage")
 public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperLogLog<T>> {
 
   private final Funnel<? super T> funnel;
@@ -120,7 +122,7 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
 
   @Override
   public void put(T value) {
-    long x = funnel.hash64(value);
+    long x = value != null ? Hashing.murmur3_128().hashObject(value, funnel).asLong() : 0L;
     int idx = (int) (x >>> (Long.SIZE - log2m)); // First p bits of x
     long w = x << log2m;
 

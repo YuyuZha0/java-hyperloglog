@@ -1,7 +1,7 @@
 package org.jhll;
 
-import org.jhll.hash.Funnel;
-import org.jhll.hash.LongFunnel;
+import com.google.common.hash.Funnel;
+import com.google.common.hash.Funnels;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -16,7 +16,7 @@ public class ClassicHyperLogLogTest {
   }
 
   private void verifyRelativeError(int num) {
-    ClassicHyperLogLog<Long> hyperLogLog = new ClassicHyperLogLog<>(new LongFunnel());
+    ClassicHyperLogLog<Long> hyperLogLog = new ClassicHyperLogLog<>(Funnels.longFunnel());
     putLongs(hyperLogLog, Long.MAX_VALUE >>> 1, num);
     long cardinality = hyperLogLog.estimatedCardinality();
     double err = (cardinality - num) / ((double) num);
@@ -26,10 +26,10 @@ public class ClassicHyperLogLogTest {
   }
 
   private void verifyUnion(int num) {
-    ClassicHyperLogLog<Long> hyperLogLog1 = new ClassicHyperLogLog<>(new LongFunnel());
+    ClassicHyperLogLog<Long> hyperLogLog1 = new ClassicHyperLogLog<>(Funnels.longFunnel());
     putLongs(hyperLogLog1, Long.MAX_VALUE >>> 1, num);
 
-    ClassicHyperLogLog<Long> hyperLogLog2 = new ClassicHyperLogLog<>(new LongFunnel());
+    ClassicHyperLogLog<Long> hyperLogLog2 = new ClassicHyperLogLog<>(Funnels.longFunnel());
     putLongs(hyperLogLog2, (Long.MAX_VALUE - num) >>> 1, num);
 
     ClassicHyperLogLog<Long> hyperLogLog = hyperLogLog1.union(hyperLogLog2);
@@ -61,7 +61,7 @@ public class ClassicHyperLogLogTest {
 
   @Test
   public void testSerialization() {
-    Funnel<Long> funnel = new LongFunnel();
+    Funnel<Long> funnel = Funnels.longFunnel();
     ClassicHyperLogLog<Long> hyperLogLog = new ClassicHyperLogLog<>(funnel);
     putLongs(hyperLogLog, Long.MAX_VALUE >>> 2, 700000);
     byte[] bytes = hyperLogLog.toByteArray();
