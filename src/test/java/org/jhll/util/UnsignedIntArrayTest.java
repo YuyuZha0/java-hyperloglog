@@ -29,6 +29,10 @@ public class UnsignedIntArrayTest {
     assertEquals(99, array.get(0));
     assertEquals(127, array.get(1));
     assertEquals(111, array.get(2));
+    array.clear();
+    assertEquals(0, array.get(0));
+    assertEquals(0, array.get(1));
+    assertEquals(0, array.get(2));
 
     array = new UnsignedIntArray(10, 4);
     array.set(0, 15);
@@ -40,6 +44,10 @@ public class UnsignedIntArrayTest {
     assertEquals(15, array.get(0));
     assertEquals(9, array.get(7));
     assertEquals(13, array.get(3));
+    array.clear();
+    assertEquals(0, array.get(0));
+    assertEquals(0, array.get(1));
+    assertEquals(0, array.get(2));
 
     array = new UnsignedIntArray(2, 8);
     array.set(0, 255);
@@ -47,6 +55,9 @@ public class UnsignedIntArrayTest {
     array.set(1, 255);
     assertEquals(255, array.get(0));
     assertEquals(255, array.get(1));
+    array.clear();
+    assertEquals(0, array.get(0));
+    assertEquals(0, array.get(1));
   }
 
   @Test
