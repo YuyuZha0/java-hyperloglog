@@ -8,14 +8,14 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.RandomAccess;
 
-public final class UnsignedIntArray implements Serializable, Cloneable, RandomAccess {
+public final class Dense8UIntArray implements Serializable, Cloneable, RandomAccess {
 
   private static final long serialVersionUID = 8779437312286023931L;
   private final int length;
   private final int width;
   private final byte[] raw;
 
-  public UnsignedIntArray(int length, int width) {
+  public Dense8UIntArray(int length, int width) {
     Preconditions.checkArgument(length > 0, "length should > 0: %s", length);
     Preconditions.checkArgument(width > 0 && width <= 8, "width should within [0, 8]: %s", width);
     this.length = length;
@@ -52,9 +52,9 @@ public final class UnsignedIntArray implements Serializable, Cloneable, RandomAc
     int bitOffset = fromBits - (arrayOffset << 3);
     int distance = 8 - w - bitOffset;
     if (distance >= 0) {
-      return (raw[arrayOffset] >>> distance) & Utils.mask(w);
+      return (raw[arrayOffset] >>> distance) & Utils.mask32(w);
     } else {
-      int n = raw[arrayOffset] & Utils.mask(distance + w);
+      int n = raw[arrayOffset] & Utils.mask32(distance + w);
       n <<= -distance;
       n |= (Byte.toUnsignedInt(raw[arrayOffset + 1]) >> (8 + distance));
       return n;
@@ -70,12 +70,12 @@ public final class UnsignedIntArray implements Serializable, Cloneable, RandomAc
     int bitOffset = fromBits - (arrayOffset << 3);
     int distance = 8 - w - bitOffset;
     if (distance >= 0) {
-      int e = ~(Utils.mask(w) << distance);
+      int e = ~(Utils.mask32(w) << distance);
       raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val << distance));
     } else {
-      int e = ~Utils.mask(w + distance);
+      int e = ~Utils.mask32(w + distance);
       raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val >> -distance));
-      int e1 = Utils.mask(8 + distance);
+      int e1 = Utils.mask32(8 + distance);
       raw[arrayOffset + 1] = (byte) ((raw[arrayOffset + 1] & e1) | (val << (8 + distance)));
     }
   }
@@ -100,8 +100,8 @@ public final class UnsignedIntArray implements Serializable, Cloneable, RandomAc
 
   @SuppressWarnings("MethodDoesntCallSuperMethod")
   @Override
-  public UnsignedIntArray clone() {
-    UnsignedIntArray copy = new UnsignedIntArray(length, width);
+  public Dense8UIntArray clone() {
+    Dense8UIntArray copy = new Dense8UIntArray(length, width);
     copy.setRawBytes(raw, 0);
     return copy;
   }
@@ -125,7 +125,7 @@ public final class UnsignedIntArray implements Serializable, Cloneable, RandomAc
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    UnsignedIntArray array = (UnsignedIntArray) o;
+    Dense8UIntArray array = (Dense8UIntArray) o;
     return length == array.length && width == array.width && Arrays.equals(raw, array.raw);
   }
 

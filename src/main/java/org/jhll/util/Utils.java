@@ -18,8 +18,12 @@ public final class Utils {
     return bytes != null && bytes.length > 0;
   }
 
-  public static int mask(int width) {
+  public static int mask32(int width) {
     return (1 << width) - 1;
+  }
+
+  public static long mask64(int width) {
+    return (1L << width) - 1L;
   }
 
   public static byte checksum(byte[] input, int offset, int length) {

@@ -3,7 +3,7 @@ package org.jhll;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Funnel;
 import com.google.common.hash.Hashing;
-import org.jhll.util.UnsignedIntArray;
+import org.jhll.util.Dense8UIntArray;
 import org.jhll.util.Utils;
 
 import java.util.Objects;
@@ -19,7 +19,7 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
   private final Funnel<? super T> funnel;
   private final int log2m;
   private final int registerWidth;
-  private final UnsignedIntArray registers;
+  private final Dense8UIntArray registers;
 
   /**
    * @param funnel calc hash
@@ -58,7 +58,7 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
     this.log2m = log2m;
     this.registerWidth = registerWidth;
     int m = 1 << log2m;
-    this.registers = new UnsignedIntArray(m, registerWidth);
+    this.registers = new Dense8UIntArray(m, registerWidth);
   }
 
   public ClassicHyperLogLog(Funnel<? super T> funnel) {
@@ -117,7 +117,7 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
   }
 
   private int rho(long w) {
-    return (Long.numberOfLeadingZeros(w) + 1) & Utils.mask(registerWidth);
+    return (Long.numberOfLeadingZeros(w) + 1) & Utils.mask32(registerWidth);
   }
 
   @Override
