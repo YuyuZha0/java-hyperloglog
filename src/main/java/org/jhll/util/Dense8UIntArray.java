@@ -11,6 +11,7 @@ import java.util.RandomAccess;
 public final class Dense8UIntArray implements Serializable, Cloneable, RandomAccess {
 
   private static final long serialVersionUID = 8779437312286023931L;
+  private static final int LOG2_OF_8 = 3;
   private final int length;
   private final int width;
   private final byte[] raw;
@@ -26,8 +27,8 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
   @VisibleForTesting
   static int minBytesLen(int length, int width) {
     int nBits = length * width;
-    int w = nBits >>> 3;
-    return (w << 3) == nBits ? w : w + 1;
+    int w = nBits >>> LOG2_OF_8;
+    return (w << LOG2_OF_8) == nBits ? w : w + 1;
   }
 
   private void checkValue(int value) {
@@ -48,15 +49,15 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
     Preconditions.checkPositionIndex(index, length);
     int w = width;
     int fromBits = index * w;
-    int arrayOffset = fromBits >>> 3;
-    int bitOffset = fromBits - (arrayOffset << 3);
-    int distance = 8 - w - bitOffset;
+    int arrayOffset = fromBits >>> LOG2_OF_8;
+    int bitOffset = fromBits - (arrayOffset << LOG2_OF_8);
+    int distance = Byte.SIZE - w - bitOffset;
     if (distance >= 0) {
       return (raw[arrayOffset] >>> distance) & Utils.mask32(w);
     } else {
       int n = raw[arrayOffset] & Utils.mask32(distance + w);
       n <<= -distance;
-      n |= (Byte.toUnsignedInt(raw[arrayOffset + 1]) >> (8 + distance));
+      n |= (Byte.toUnsignedInt(raw[arrayOffset + 1]) >>> (Byte.SIZE + distance));
       return n;
     }
   }
@@ -66,17 +67,17 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
     checkValue(val);
     int w = width;
     int fromBits = index * w;
-    int arrayOffset = fromBits >>> 3;
-    int bitOffset = fromBits - (arrayOffset << 3);
-    int distance = 8 - w - bitOffset;
+    int arrayOffset = fromBits >>> LOG2_OF_8;
+    int bitOffset = fromBits - (arrayOffset << LOG2_OF_8);
+    int distance = Byte.SIZE - w - bitOffset;
     if (distance >= 0) {
       int e = ~(Utils.mask32(w) << distance);
       raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val << distance));
     } else {
       int e = ~Utils.mask32(w + distance);
-      raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val >> -distance));
-      int e1 = Utils.mask32(8 + distance);
-      raw[arrayOffset + 1] = (byte) ((raw[arrayOffset + 1] & e1) | (val << (8 + distance)));
+      raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val >>> -distance));
+      int e1 = Utils.mask32(Byte.SIZE + distance);
+      raw[arrayOffset + 1] = (byte) ((raw[arrayOffset + 1] & e1) | (val << (Byte.SIZE + distance)));
     }
   }
 
