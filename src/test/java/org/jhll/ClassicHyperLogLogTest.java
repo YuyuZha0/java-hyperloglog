@@ -9,7 +9,7 @@ import static org.junit.Assert.assertTrue;
 
 public class ClassicHyperLogLogTest {
 
-  private static void putLongs(HyperLogLog<Long, ?> hyperLogLog, long fromValue, int num) {
+  private static void putLongs(HyperLogLog<Long> hyperLogLog, long fromValue, int num) {
     for (int i = 0; i < num; ++i) {
       hyperLogLog.put(fromValue + i);
     }
@@ -32,7 +32,7 @@ public class ClassicHyperLogLogTest {
     ClassicHyperLogLog<Long> hyperLogLog2 = new ClassicHyperLogLog<>(Funnels.longFunnel());
     putLongs(hyperLogLog2, (Long.MAX_VALUE - num) >>> 1, num);
 
-    ClassicHyperLogLog<Long> hyperLogLog = hyperLogLog1.union(hyperLogLog2);
+    HyperLogLog<Long> hyperLogLog = hyperLogLog1.union(hyperLogLog2);
     long cardinality = hyperLogLog.estimatedCardinality();
     long actual = (Long.MAX_VALUE >>> 1) + num - ((Long.MAX_VALUE - num) >>> 1) + 1;
     double err = (cardinality - actual) / ((double) actual);
@@ -65,6 +65,7 @@ public class ClassicHyperLogLogTest {
     ClassicHyperLogLog<Long> hyperLogLog = new ClassicHyperLogLog<>(funnel);
     putLongs(hyperLogLog, Long.MAX_VALUE >>> 2, 700000);
     byte[] bytes = hyperLogLog.toByteArray();
+    assertEquals(hyperLogLog.serializedSize(), bytes.length);
     ClassicHyperLogLog<Long> hyperLogLog1 = ClassicHyperLogLog.fromByteArray(bytes, funnel);
     assertEquals(hyperLogLog, hyperLogLog1);
   }

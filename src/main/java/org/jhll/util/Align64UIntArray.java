@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.RandomAccess;
 
-public final class Dense64UIntArray implements Serializable, Cloneable, RandomAccess {
+public final class Align64UIntArray implements Serializable, Cloneable, RandomAccess {
 
   private static final int LOG2_OF_64 = 6;
   private static final long serialVersionUID = -1651310095059455236L;
@@ -18,17 +18,17 @@ public final class Dense64UIntArray implements Serializable, Cloneable, RandomAc
   private final long[] words;
   private final long mask;
 
-  public Dense64UIntArray(int length, int width) {
+  public Align64UIntArray(int length, int width) {
     Preconditions.checkArgument(length > 0, "length should > 0: %s", length);
     Preconditions.checkArgument(width > 0 && width <= 31, "width should within [0, 31]: %s", width);
     this.length = length;
     this.width = width;
-    this.words = new long[minWordsLen(length, width)];
+    this.words = new long[requiredLongs(length, width)];
     this.mask = Utils.mask64(width);
   }
 
   @VisibleForTesting
-  static int minWordsLen(int length, int width) {
+  public static int requiredLongs(int length, int width) {
     int nBits = length * width;
     int w = nBits >>> LOG2_OF_64;
     return (w << LOG2_OF_64) == nBits ? w : w + 1;
@@ -108,8 +108,8 @@ public final class Dense64UIntArray implements Serializable, Cloneable, RandomAc
 
   @SuppressWarnings("MethodDoesntCallSuperMethod")
   @Override
-  public Dense64UIntArray clone() {
-    Dense64UIntArray copy = new Dense64UIntArray(length, width);
+  public Align64UIntArray clone() {
+    Align64UIntArray copy = new Align64UIntArray(length, width);
     copy.setWords(words, 0);
     return copy;
   }
@@ -133,7 +133,7 @@ public final class Dense64UIntArray implements Serializable, Cloneable, RandomAc
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    Dense64UIntArray array = (Dense64UIntArray) o;
+    Align64UIntArray array = (Align64UIntArray) o;
     return length == array.length && width == array.width && Arrays.equals(words, array.words);
   }
 

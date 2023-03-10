@@ -21,11 +21,11 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 // @Threads(3)
 @Fork(1)
-public class DenseArrayBenchmark {
+public class AlignArrayBenchmark {
 
-  private Dense64UIntArray dense64UIntArray;
+  private Align64UIntArray align64UIntArray;
 
-  private Dense8UIntArray dense8UIntArray;
+  private Align8UIntArray align8UIntArray;
 
   private int index;
 
@@ -33,34 +33,34 @@ public class DenseArrayBenchmark {
   public void setup() {
     int size = 4096;
     int[] values = ThreadLocalRandom.current().ints(size, 0, 0x7f).toArray();
-    dense8UIntArray = new Dense8UIntArray(size, 7);
-    dense64UIntArray = new Dense64UIntArray(size, 7);
+    align8UIntArray = new Align8UIntArray(size, 7);
+    align64UIntArray = new Align64UIntArray(size, 7);
     for (int i = 0; i < values.length; ++i) {
-      dense8UIntArray.set(i, values[i]);
-      dense64UIntArray.set(i, values[i]);
+      align8UIntArray.set(i, values[i]);
+      align64UIntArray.set(i, values[i]);
     }
     index = 0;
   }
 
   @Benchmark
   public int dense8Bench() {
-    if (index >= dense8UIntArray.length() - 1) {
+    if (index >= align8UIntArray.length() - 1) {
       index = 0;
     }
-    int temp = dense8UIntArray.get(index + 1);
-    dense8UIntArray.set(index + 1, dense8UIntArray.get(index));
-    dense8UIntArray.set(index, temp);
-    return dense8UIntArray.get(index + 1);
+    int temp = align8UIntArray.get(index + 1);
+    align8UIntArray.set(index + 1, align8UIntArray.get(index));
+    align8UIntArray.set(index, temp);
+    return align8UIntArray.get(index + 1);
   }
 
   @Benchmark
   public int dense64Bench() {
-    if (index >= dense64UIntArray.length() - 1) {
+    if (index >= align64UIntArray.length() - 1) {
       index = 0;
     }
-    int temp = dense64UIntArray.get(index + 1);
-    dense64UIntArray.set(index + 1, dense64UIntArray.get(index));
-    dense64UIntArray.set(index, temp);
-    return dense64UIntArray.get(index + 1);
+    int temp = align64UIntArray.get(index + 1);
+    align64UIntArray.set(index + 1, align64UIntArray.get(index));
+    align64UIntArray.set(index, temp);
+    return align64UIntArray.get(index + 1);
   }
 }

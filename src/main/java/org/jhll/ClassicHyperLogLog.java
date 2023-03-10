@@ -3,7 +3,7 @@ package org.jhll;
 import com.google.common.base.Preconditions;
 import com.google.common.hash.Funnel;
 import com.google.common.hash.Hashing;
-import org.jhll.util.Dense8UIntArray;
+import org.jhll.util.Align8UIntArray;
 import org.jhll.util.Utils;
 
 import java.util.Objects;
@@ -14,12 +14,14 @@ import java.util.Objects;
  * @param <T>
  */
 @SuppressWarnings("UnstableApiUsage")
-public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperLogLog<T>> {
+public final class ClassicHyperLogLog<T> implements HyperLogLog<T> {
+
+  static final byte MARK = (byte) 0xc7;
 
   private final Funnel<? super T> funnel;
   private final int log2m;
   private final int registerWidth;
-  private final Dense8UIntArray registers;
+  private final Align8UIntArray registers;
 
   /**
    * @param funnel calc hash
@@ -58,11 +60,15 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
     this.log2m = log2m;
     this.registerWidth = registerWidth;
     int m = 1 << log2m;
-    this.registers = new Dense8UIntArray(m, registerWidth);
+    this.registers = new Align8UIntArray(m, registerWidth);
   }
 
   public ClassicHyperLogLog(Funnel<? super T> funnel) {
     this(funnel, 11, 5);
+  }
+
+  static int requiredBytes(int log2m, int registerWidth) {
+    return Align8UIntArray.requiredBytes(1 << log2m, registerWidth) + 3;
   }
 
   private static double alpha(int m) {
@@ -101,18 +107,20 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
   public static <U> ClassicHyperLogLog<U> fromByteArray(byte[] bytes, Funnel<? super U> funnel) {
     Preconditions.checkNotNull(bytes, "null bytes");
     Preconditions.checkNotNull(funnel, "null funnel");
-    Preconditions.checkArgument(bytes.length > 2, "bytes length is at least 2: %s", bytes.length);
+    Preconditions.checkArgument(bytes.length > 3, "bytes length is at least 3: %s", bytes.length);
+    Preconditions.checkArgument(
+        bytes[0] == MARK, "first byte should be: %s, but: %s", MARK, bytes[0]);
     byte checksum = Utils.checksum(bytes, 0, bytes.length - 1);
     Preconditions.checkArgument(
         checksum == bytes[bytes.length - 1],
         "checksum not match, expected: %s, actual: %s",
         checksum,
         bytes[bytes.length - 1]);
-    byte prefix = bytes[0];
+    byte prefix = bytes[1];
     int log2m = (prefix >>> 3) & 0xff;
     int registerWidth = prefix & 0b111;
     ClassicHyperLogLog<U> hyperLogLog = new ClassicHyperLogLog<>(funnel, log2m, registerWidth);
-    hyperLogLog.registers.setRawBytes(bytes, 1);
+    hyperLogLog.registers.setWords(bytes, 2);
     return hyperLogLog;
   }
 
@@ -123,6 +131,10 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
   @Override
   public void put(T value) {
     long x = value != null ? Hashing.murmur3_128().hashObject(value, funnel).asLong() : 0L;
+    putX(x);
+  }
+
+  private void putX(long x) {
     int idx = (int) (x >>> (Long.SIZE - log2m)); // First p bits of x
     long w = x << log2m;
 
@@ -168,10 +180,11 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
 
   @Override
   public byte[] toByteArray() {
-    byte[] raw = registers.getRawBytes(false);
-    byte[] bytes = new byte[raw.length + 2];
-    bytes[0] = makePrefix(log2m, registerWidth);
-    System.arraycopy(raw, 0, bytes, 1, raw.length);
+    byte[] raw = registers.getWords(false);
+    byte[] bytes = new byte[raw.length + 3];
+    bytes[0] = MARK;
+    bytes[1] = makePrefix(log2m, registerWidth);
+    System.arraycopy(raw, 0, bytes, 2, raw.length);
     byte checksum = Utils.checksum(bytes, 0, bytes.length - 1);
     bytes[bytes.length - 1] = checksum;
     return bytes;
@@ -194,8 +207,19 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
   }
 
   @Override
-  public ClassicHyperLogLog<T> union(ClassicHyperLogLog<T> other) {
+  public HyperLogLog<T> union(HyperLogLog<T> other) {
     Preconditions.checkNotNull(other);
+    if (other instanceof ClassicHyperLogLog) {
+      return unionClassic((ClassicHyperLogLog<T>) other);
+    }
+    if (other instanceof ExplicitHyperLogLog) {
+      return unionExplicit(((ExplicitHyperLogLog<T>) other));
+    }
+
+    return other.union(this);
+  }
+
+  private ClassicHyperLogLog<T> unionClassic(ClassicHyperLogLog<T> other) {
     Preconditions.checkArgument(log2m == other.log2m, "log2m not match!");
     ClassicHyperLogLog<T> result =
         new ClassicHyperLogLog<>(funnel, log2m, Math.max(registerWidth, other.registerWidth));
@@ -204,6 +228,18 @@ public final class ClassicHyperLogLog<T> implements HyperLogLog<T, ClassicHyperL
       result.registers.set(i, Math.max(registers.get(i), other.registers.get(i)));
     }
     return result;
+  }
+
+  private ClassicHyperLogLog<T> unionExplicit(ExplicitHyperLogLog<T> other) {
+    ClassicHyperLogLog<T> result = new ClassicHyperLogLog<>(funnel, log2m, registerWidth);
+    result.registers.setWords(registers.getWords(false), 0);
+    other.forEachValue(result::putX);
+    return result;
+  }
+
+  @Override
+  public int serializedSize() {
+    return requiredBytes(log2m, registerWidth);
   }
 
   @Override

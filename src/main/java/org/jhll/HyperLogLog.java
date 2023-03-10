@@ -4,11 +4,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Objects;
 
-public interface HyperLogLog<T, H extends HyperLogLog<T, H>> {
+public interface HyperLogLog<T> {
 
   void put(T value);
 
   long estimatedCardinality();
+
+  int serializedSize();
 
   default double relativeError() {
     return 0;
@@ -24,7 +26,7 @@ public interface HyperLogLog<T, H extends HyperLogLog<T, H>> {
     }
   }
 
-  H union(H other);
+  HyperLogLog<T> union(HyperLogLog<T> other);
 
   void reset();
 }

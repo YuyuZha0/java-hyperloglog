@@ -7,19 +7,19 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-public class Dense8UIntArrayTest {
+public class Align8UIntArrayTest {
 
   @Test
   public void testMinBytesLen() {
-    assertEquals(4, Dense8UIntArray.minBytesLen(4, 7));
-    assertEquals(1, Dense8UIntArray.minBytesLen(4, 2));
-    assertEquals(10, Dense8UIntArray.minBytesLen(16, 5));
-    assertEquals(10, Dense8UIntArray.minBytesLen(15, 5));
+    assertEquals(4, Align8UIntArray.requiredBytes(4, 7));
+    assertEquals(1, Align8UIntArray.requiredBytes(4, 2));
+    assertEquals(10, Align8UIntArray.requiredBytes(16, 5));
+    assertEquals(10, Align8UIntArray.requiredBytes(15, 5));
   }
 
   @Test
   public void test() {
-    Dense8UIntArray array = new Dense8UIntArray(3, 7);
+    Align8UIntArray array = new Align8UIntArray(3, 7);
     array.set(0, 99);
     assertEquals(99, array.get(0));
     array.set(1, 127);
@@ -34,7 +34,7 @@ public class Dense8UIntArrayTest {
     assertEquals(0, array.get(1));
     assertEquals(0, array.get(2));
 
-    array = new Dense8UIntArray(10, 4);
+    array = new Align8UIntArray(10, 4);
     array.set(0, 15);
     assertEquals(15, array.get(0));
     array.set(7, 9);
@@ -49,7 +49,7 @@ public class Dense8UIntArrayTest {
     assertEquals(0, array.get(1));
     assertEquals(0, array.get(2));
 
-    array = new Dense8UIntArray(2, 8);
+    array = new Align8UIntArray(2, 8);
     array.set(0, 255);
     assertEquals(255, array.get(0));
     array.set(1, 255);
@@ -63,7 +63,7 @@ public class Dense8UIntArrayTest {
   @Test
   public void testRandom() {
     int[] randomValues = ThreadLocalRandom.current().ints(1000, 0, 32).toArray();
-    Dense8UIntArray array = new Dense8UIntArray(randomValues.length, 5);
+    Align8UIntArray array = new Align8UIntArray(randomValues.length, 5);
     for (int i = 0; i < randomValues.length; ++i) {
       array.set(i, randomValues[i]);
     }

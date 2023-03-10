@@ -8,24 +8,24 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.RandomAccess;
 
-public final class Dense8UIntArray implements Serializable, Cloneable, RandomAccess {
+public final class Align8UIntArray implements Serializable, Cloneable, RandomAccess {
 
   private static final long serialVersionUID = 8779437312286023931L;
   private static final int LOG2_OF_8 = 3;
   private final int length;
   private final int width;
-  private final byte[] raw;
+  private final byte[] words;
 
-  public Dense8UIntArray(int length, int width) {
+  public Align8UIntArray(int length, int width) {
     Preconditions.checkArgument(length > 0, "length should > 0: %s", length);
     Preconditions.checkArgument(width > 0 && width <= 8, "width should within [0, 8]: %s", width);
     this.length = length;
     this.width = width;
-    this.raw = new byte[minBytesLen(length, width)];
+    this.words = new byte[requiredBytes(length, width)];
   }
 
   @VisibleForTesting
-  static int minBytesLen(int length, int width) {
+  public static int requiredBytes(int length, int width) {
     int nBits = length * width;
     int w = nBits >>> LOG2_OF_8;
     return (w << LOG2_OF_8) == nBits ? w : w + 1;
@@ -53,11 +53,11 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
     int bitOffset = fromBits - (arrayOffset << LOG2_OF_8);
     int distance = Byte.SIZE - w - bitOffset;
     if (distance >= 0) {
-      return (raw[arrayOffset] >>> distance) & Utils.mask32(w);
+      return (words[arrayOffset] >>> distance) & Utils.mask32(w);
     } else {
-      int n = raw[arrayOffset] & Utils.mask32(distance + w);
+      int n = words[arrayOffset] & Utils.mask32(distance + w);
       n <<= -distance;
-      n |= (Byte.toUnsignedInt(raw[arrayOffset + 1]) >>> (Byte.SIZE + distance));
+      n |= (Byte.toUnsignedInt(words[arrayOffset + 1]) >>> (Byte.SIZE + distance));
       return n;
     }
   }
@@ -72,12 +72,13 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
     int distance = Byte.SIZE - w - bitOffset;
     if (distance >= 0) {
       int e = ~(Utils.mask32(w) << distance);
-      raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val << distance));
+      words[arrayOffset] = (byte) ((words[arrayOffset] & e) | (val << distance));
     } else {
       int e = ~Utils.mask32(w + distance);
-      raw[arrayOffset] = (byte) ((raw[arrayOffset] & e) | (val >>> -distance));
+      words[arrayOffset] = (byte) ((words[arrayOffset] & e) | (val >>> -distance));
       int e1 = Utils.mask32(Byte.SIZE + distance);
-      raw[arrayOffset + 1] = (byte) ((raw[arrayOffset + 1] & e1) | (val << (Byte.SIZE + distance)));
+      words[arrayOffset + 1] =
+          (byte) ((words[arrayOffset + 1] & e1) | (val << (Byte.SIZE + distance)));
     }
   }
 
@@ -91,7 +92,7 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
 
   public void clear() {
     byte zero = 0;
-    Arrays.fill(raw, zero);
+    Arrays.fill(words, zero);
   }
 
   @Override
@@ -101,39 +102,39 @@ public final class Dense8UIntArray implements Serializable, Cloneable, RandomAcc
 
   @SuppressWarnings("MethodDoesntCallSuperMethod")
   @Override
-  public Dense8UIntArray clone() {
-    Dense8UIntArray copy = new Dense8UIntArray(length, width);
-    copy.setRawBytes(raw, 0);
+  public Align8UIntArray clone() {
+    Align8UIntArray copy = new Align8UIntArray(length, width);
+    copy.setWords(words, 0);
     return copy;
   }
 
-  public byte[] getRawBytes(boolean copy) {
+  public byte[] getWords(boolean copy) {
     if (copy) {
-      return Arrays.copyOf(raw, raw.length);
+      return Arrays.copyOf(words, words.length);
     } else {
-      return raw;
+      return words;
     }
   }
 
-  public void setRawBytes(byte[] src, int offset) {
+  public void setWords(byte[] src, int offset) {
     Preconditions.checkNotNull(src);
     Preconditions.checkArgument(offset >= 0, "illegal offset: %s", offset);
-    Preconditions.checkArgument(src.length >= offset + raw.length, "capacity not enough!");
-    System.arraycopy(src, offset, raw, 0, raw.length);
+    Preconditions.checkArgument(src.length >= offset + words.length, "capacity not enough!");
+    System.arraycopy(src, offset, words, 0, words.length);
   }
 
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    Dense8UIntArray array = (Dense8UIntArray) o;
-    return length == array.length && width == array.width && Arrays.equals(raw, array.raw);
+    Align8UIntArray array = (Align8UIntArray) o;
+    return length == array.length && width == array.width && Arrays.equals(words, array.words);
   }
 
   @Override
   public int hashCode() {
     int result = Objects.hash(length, width);
-    result = 31 * result + Arrays.hashCode(raw);
+    result = 31 * result + Arrays.hashCode(words);
     return result;
   }
 }

@@ -7,11 +7,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
-public class Dense64UIntArrayTest {
+public class Align64UIntArrayTest {
 
   @Test
   public void test() {
-    Dense64UIntArray array = new Dense64UIntArray(3, 7);
+    Align64UIntArray array = new Align64UIntArray(3, 7);
     array.set(0, 99);
     assertEquals(99, array.get(0));
     array.set(1, 127);
@@ -26,7 +26,7 @@ public class Dense64UIntArrayTest {
     assertEquals(0, array.get(1));
     assertEquals(0, array.get(2));
 
-    array = new Dense64UIntArray(10, 30);
+    array = new Align64UIntArray(10, 30);
     array.set(0, 15);
     assertEquals(15, array.get(0));
     array.set(7, 9);
@@ -41,7 +41,7 @@ public class Dense64UIntArrayTest {
     assertEquals(0, array.get(1));
     assertEquals(0, array.get(2));
 
-    array = new Dense64UIntArray(2, 8);
+    array = new Align64UIntArray(2, 8);
     array.set(0, 255);
     assertEquals(255, array.get(0));
     array.set(1, 255);
@@ -55,7 +55,7 @@ public class Dense64UIntArrayTest {
   @Test
   public void testRandom() {
     int[] randomValues = ThreadLocalRandom.current().ints(1000, 0, Integer.MAX_VALUE).toArray();
-    Dense64UIntArray array = new Dense64UIntArray(randomValues.length, 31);
+    Align64UIntArray array = new Align64UIntArray(randomValues.length, 31);
     for (int i = 0; i < randomValues.length; ++i) {
       array.set(i, randomValues[i]);
     }
